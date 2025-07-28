@@ -185,34 +185,61 @@ func TestFetchServerStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.envURL != "" {
-				err := os.Setenv("DATACENTER_URL", tt.envURL)
-				if err != nil {
-					return
-				}
-				defer func() {
-					err := os.Unsetenv("DATACENTER_URL")
-					if err != nil {
-						return
-					}
-				}()
-			} else {
-				err := os.Unsetenv("DATACENTER_URL")
-				if err != nil {
-					return
-				}
-			}
-
-			servers, errors := fetchServerStatus(context.Background())
-
-			if len(servers) != tt.wantServers {
-				t.Errorf("fetchServerStatus() servers = %v, want %v", len(servers), tt.wantServers)
-			}
-
-			if len(errors) != tt.wantErrors {
-				t.Errorf("fetchServerStatus() errors = %v, want %v", len(errors), tt.wantErrors)
-			}
+			runTest(t, tt)
 		})
+	}
+}
+
+func runTest(t *testing.T, tt struct {
+	name        string
+	envURL      string
+	wantServers int
+	wantErrors  int
+}) {
+	if tt.envURL != "" {
+		err := os.Setenv("DATACENTER_URL", tt.envURL)
+		if err != nil {
+			return
+		}
+		defer func() {
+			err := os.Unsetenv("DATACENTER_URL")
+			if err != nil {
+				return
+			}
+		}()
+	} else {
+		err := os.Unsetenv("DATACENTER_URL")
+		if err != nil {
+			return
+		}
+	}
+
+	servers, errors := fetchServerStatus(context.Background())
+
+	checkServers(t, servers, tt)
+
+	checkErrors(t, errors, tt)
+}
+
+func checkErrors(t *testing.T, errors []error, tt struct {
+	name        string
+	envURL      string
+	wantServers int
+	wantErrors  int
+}) {
+	if len(errors) != tt.wantErrors {
+		t.Errorf("fetchServerStatus() errors = %v, want %v", len(errors), tt.wantErrors)
+	}
+}
+
+func checkServers(t *testing.T, servers []*ServerInfo, tt struct {
+	name        string
+	envURL      string
+	wantServers int
+	wantErrors  int
+}) {
+	if len(servers) != tt.wantServers {
+		t.Errorf("fetchServerStatus() servers = %v, want %v", len(servers), tt.wantServers)
 	}
 }
 
