@@ -12,43 +12,52 @@ import (
 	"testing"
 )
 
-func TestHandleRequest(t *testing.T) {
-	// Setup test servers
-	statusServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// Helper function to create a test server with static XML response
+func newXMLTestServer(responseBody string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		_, err := w.Write([]byte(`
-            <Status>
-                <name>TestServer</name>
-                <allow_billing_role>role1,role2,role3,role4,role5</allow_billing_role>
-            </Status>`))
+		_, err := w.Write([]byte(responseBody))
 		if err != nil {
-			return
+			panic(err)
 		}
 	}))
+}
+
+var statusResponse = `
+    <Status>
+        <name>TestServer</name>
+        <allow_billing_role>role1,role2,role3,role4,role5</allow_billing_role>
+    </Status>`
+
+var dcResponse = `
+    <ArrayOfDatacenterStruct>
+        <DatacenterStruct>
+            <KeyName>Test</KeyName>
+            <Datacenter>
+                <cachedAt>2024-01-01T00:00:00Z</cachedAt>
+                <datacenter>
+                    <Datacenter>
+                        <Worlds>
+                            <World>
+                                <Name>TestWorld</Name>
+                                <StatusServerUrl>%s</StatusServerUrl>
+                                <Order>1</Order>
+                            </World>
+                        </Worlds>
+                    </Datacenter>
+                </datacenter>
+            </Datacenter>
+        </DatacenterStruct>
+    </ArrayOfDatacenterStruct>`
+
+func TestHandleRequest(t *testing.T) {
+	// Setup test servers
+	statusServer := newXMLTestServer(statusResponse)
 	defer statusServer.Close()
 
 	datacenterServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		_, err := w.Write([]byte(fmt.Sprintf(`
-            <ArrayOfDatacenterStruct>
-                <DatacenterStruct>
-                    <KeyName>Test</KeyName>
-                    <Datacenter>
-                        <cachedAt>2024-01-01T00:00:00Z</cachedAt>
-                        <datacenter>
-                            <Datacenter>
-                                <Worlds>
-                                    <World>
-                                        <Name>TestWorld</Name>
-                                        <StatusServerUrl>%s</StatusServerUrl>
-                                        <Order>1</Order>
-                                    </World>
-                                </Worlds>
-                            </Datacenter>
-                        </datacenter>
-                    </Datacenter>
-                </DatacenterStruct>
-            </ArrayOfDatacenterStruct>`, statusServer.URL)))
+		_, err := w.Write([]byte(fmt.Sprintf(dcResponse, statusServer.URL)))
 		if err != nil {
 			return
 		}
@@ -120,41 +129,12 @@ func TestHandleRequest(t *testing.T) {
 
 func TestFetchServerStatus(t *testing.T) {
 	// Setup test servers
-	statusServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		_, err := w.Write([]byte(`
-            <Status>
-                <name>TestServer</name>
-                <allow_billing_role>role1,role2,role3,role4,role5</allow_billing_role>
-            </Status>`))
-		if err != nil {
-			return
-		}
-	}))
+	statusServer := newXMLTestServer(statusResponse)
 	defer statusServer.Close()
 
 	datacenterServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		_, err := w.Write([]byte(fmt.Sprintf(`
-            <ArrayOfDatacenterStruct>
-                <DatacenterStruct>
-                    <KeyName>Test</KeyName>
-                    <Datacenter>
-                        <cachedAt>2024-01-01T00:00:00Z</cachedAt>
-                        <datacenter>
-                            <Datacenter>
-                                <Worlds>
-                                    <World>
-                                        <Name>TestWorld</Name>
-                                        <StatusServerUrl>%s</StatusServerUrl>
-                                        <Order>1</Order>
-                                    </World>
-                                </Worlds>
-                            </Datacenter>
-                        </datacenter>
-                    </Datacenter>
-                </DatacenterStruct>
-            </ArrayOfDatacenterStruct>`, statusServer.URL)))
+		_, err := w.Write([]byte(fmt.Sprintf(dcResponse, statusServer.URL)))
 		if err != nil {
 			return
 		}
@@ -279,11 +259,7 @@ func TestFetchAndParseStatus(t *testing.T) {
 	// Setup test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		_, err := w.Write([]byte(`
-			<Status>
-				<name>TestServer</name>
-				<allow_billing_role>role1,role2,role3,role4,role5</allow_billing_role>
-			</Status>`))
+		_, err := w.Write([]byte(statusResponse))
 		if err != nil {
 			return
 		}
