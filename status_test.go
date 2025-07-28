@@ -63,27 +63,38 @@ func TestWorkerPoolProcessURLs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), tt.timeout)
-			defer cancel()
-
-			pool := NewWorkerPool(tt.workers, 3)
-			results := pool.ProcessURLs(ctx, tt.urls)
-
-			count := 0
-			for result := range results {
-				count++
-				if result.Error != nil && !tt.wantErr {
-					t.Errorf("ProcessURLs() got unexpected error: %v", result.Error)
-				}
-				if result.Status == nil && !tt.wantErr {
-					t.Error("ProcessURLs() got nil Status for successful request")
-				}
-			}
-
-			if count != tt.wantLen {
-				t.Errorf("ProcessURLs() processed %v URLs, want %v", count, tt.wantLen)
-			}
+			runTests(t, tt)
 		})
+	}
+}
+
+func runTests(t *testing.T, tt struct {
+	name    string
+	urls    []string
+	workers int
+	wantLen int
+	wantErr bool
+	timeout time.Duration
+}) {
+	ctx, cancel := context.WithTimeout(context.Background(), tt.timeout)
+	defer cancel()
+
+	pool := NewWorkerPool(tt.workers, 3)
+	results := pool.ProcessURLs(ctx, tt.urls)
+
+	count := 0
+	for result := range results {
+		count++
+		if result.Error != nil && !tt.wantErr {
+			t.Errorf("ProcessURLs() got unexpected error: %v", result.Error)
+		}
+		if result.Status == nil && !tt.wantErr {
+			t.Error("ProcessURLs() got nil Status for successful request")
+		}
+	}
+
+	if count != tt.wantLen {
+		t.Errorf("ProcessURLs() processed %v URLs, want %v", count, tt.wantLen)
 	}
 }
 
