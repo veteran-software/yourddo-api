@@ -24,7 +24,7 @@ func TestNewWorkerPool(t *testing.T) {
 	}
 }
 
-func TestWorkerPool_ProcessURLs(t *testing.T) {
+func TestWorkerPoolProcessURLs(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
@@ -87,7 +87,7 @@ func TestWorkerPool_ProcessURLs(t *testing.T) {
 	}
 }
 
-func TestWorkerPool_fetchStatus(t *testing.T) {
+func TestWorkerPoolFetchStatus(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")

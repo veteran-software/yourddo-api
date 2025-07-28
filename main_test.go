@@ -12,10 +12,15 @@ import (
 	"testing"
 )
 
+const contentTypeKey = "Content-Type"
+const contentTypeValue = "application/xml"
+const DatacenterUrl = "DATACENTER_URL"
+const invalidUrl = "http://invalid-url"
+
 // Helper function to create a test server with static XML response
 func newXMLTestServer(responseBody string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set(contentTypeKey, contentTypeValue)
 		_, err := w.Write([]byte(responseBody))
 		if err != nil {
 			panic(err)
@@ -50,13 +55,38 @@ var dcResponse = `
         </DatacenterStruct>
     </ArrayOfDatacenterStruct>`
 
+func setEnvVar(key, value string) error {
+	return os.Setenv(key, value)
+}
+
+func unsetEnvVar(key string) error {
+	return os.Unsetenv(key)
+}
+
+func setupEnv(t *testing.T, envURL string) func() {
+	if envURL != "" {
+		if err := setEnvVar(DatacenterUrl, envURL); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		if err := unsetEnvVar(DatacenterUrl); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return func() {
+		if envURL != "" {
+			_ = unsetEnvVar(DatacenterUrl)
+		}
+	}
+}
+
 func TestHandleRequest(t *testing.T) {
 	// Setup test servers
 	statusServer := newXMLTestServer(statusResponse)
 	defer statusServer.Close()
 
 	datacenterServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set(contentTypeKey, contentTypeValue)
 		_, err := w.Write([]byte(fmt.Sprintf(dcResponse, statusServer.URL)))
 		if err != nil {
 			return
@@ -86,23 +116,8 @@ func TestHandleRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.envURL != "" {
-				err := os.Setenv("DATACENTER_URL", tt.envURL)
-				if err != nil {
-					return
-				}
-				defer func() {
-					err := os.Unsetenv("DATACENTER_URL")
-					if err != nil {
-						panic("Failed to unset environment variable: DATACENTER_URL")
-					}
-				}()
-			} else {
-				err := os.Unsetenv("DATACENTER_URL")
-				if err != nil {
-					return
-				}
-			}
+			cleanup := setupEnv(t, tt.envURL)
+			defer cleanup()
 
 			got, err := handleRequest(context.Background(), events.APIGatewayProxyRequest{})
 			if err != nil {
@@ -111,7 +126,7 @@ func TestHandleRequest(t *testing.T) {
 			}
 
 			if got.StatusCode != tt.wantStatus {
-				t.Errorf("handleRequest() status = %v, want %v", got.StatusCode, tt.wantStatus)
+				t.Errorf("status = %v, want %v", got.StatusCode, tt.wantStatus)
 			}
 
 			var response Response
@@ -121,9 +136,10 @@ func TestHandleRequest(t *testing.T) {
 			}
 
 			if len(response.Errors) != tt.wantErrorsLen {
-				t.Errorf("handleRequest() errors length = %v, want %v", len(response.Errors), tt.wantErrorsLen)
+				t.Errorf("errors length = %v, want %v", len(response.Errors), tt.wantErrorsLen)
 			}
 		})
+
 	}
 }
 
@@ -133,7 +149,7 @@ func TestFetchServerStatus(t *testing.T) {
 	defer statusServer.Close()
 
 	datacenterServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set(contentTypeKey, contentTypeValue)
 		_, err := w.Write([]byte(fmt.Sprintf(dcResponse, statusServer.URL)))
 		if err != nil {
 			return
@@ -161,7 +177,7 @@ func TestFetchServerStatus(t *testing.T) {
 		},
 		{
 			name:        "invalid datacenter URL",
-			envURL:      "http://invalid-url",
+			envURL:      invalidUrl,
 			wantServers: 0,
 			wantErrors:  1,
 		},
@@ -203,7 +219,7 @@ func TestFetchServerStatus(t *testing.T) {
 func TestFetchAndParseDatacenter(t *testing.T) {
 	// Setup test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set(contentTypeKey, contentTypeValue)
 		_, err := w.Write([]byte(`
 			<ArrayOfDatacenterStruct>
 				<DatacenterStruct>
@@ -236,7 +252,7 @@ func TestFetchAndParseDatacenter(t *testing.T) {
 		},
 		{
 			name:    "invalid URL",
-			url:     "http://invalid-url",
+			url:     invalidUrl,
 			wantErr: true,
 		},
 	}
@@ -258,7 +274,7 @@ func TestFetchAndParseDatacenter(t *testing.T) {
 func TestFetchAndParseStatus(t *testing.T) {
 	// Setup test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set(contentTypeKey, contentTypeValue)
 		_, err := w.Write([]byte(statusResponse))
 		if err != nil {
 			return
@@ -280,7 +296,7 @@ func TestFetchAndParseStatus(t *testing.T) {
 		},
 		{
 			name:    "invalid URL",
-			url:     "http://invalid-url",
+			url:     invalidUrl,
 			want:    nil,
 			wantErr: true,
 		},
