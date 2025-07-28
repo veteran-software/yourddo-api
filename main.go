@@ -105,7 +105,6 @@ func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
 
 	result, err := FetchAndParseDatacenter(url)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
 		return nil, []error{err}
 	}
 
@@ -129,7 +128,6 @@ func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
 		}
 
 		if result.Status == nil {
-			fmt.Printf("Warning: nil Status for URL %s\n", result.URL)
 			continue
 		}
 

@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-type StatusResult struct {
-	URL    string
-	Status *Status
-	Error  error
-}
-
 type WorkerPool struct {
 	workers    int
 	maxRetries int
@@ -74,42 +68,6 @@ func (p *WorkerPool) ProcessURLs(ctx context.Context, urls []string) chan Worker
 	}()
 
 	return results
-}
-
-func (p *WorkerPool) worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan string, results chan<- StatusResult) {
-	defer wg.Done()
-
-	for url := range jobs {
-		var result StatusResult
-		result.URL = url
-
-		// Try to fetch and parse with retries
-		for attempt := 1; attempt <= p.maxRetries; attempt++ {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				status, err := p.fetchStatus(ctx, url)
-				if err == nil {
-					result.Status = status
-					break
-				}
-				if attempt == p.maxRetries {
-					result.Error = fmt.Errorf("failed after %d attempts: %w", p.maxRetries, err)
-				} else {
-					// Exponential backoff
-					backoff := time.Duration(attempt*attempt) * 100 * time.Millisecond
-					time.Sleep(backoff)
-				}
-			}
-		}
-
-		select {
-		case results <- result:
-		case <-ctx.Done():
-			return
-		}
-	}
 }
 
 func (p *WorkerPool) fetchStatus(ctx context.Context, url string) (*Status, error) {
