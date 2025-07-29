@@ -1,4 +1,4 @@
-package server_status
+package main
 
 import (
 	"bytes"
@@ -157,7 +157,6 @@ func fetchServerStatus(ctx context.Context) ([]*types.ServerInfo, []error) {
 	return serverInfos, errors
 }
 
-// noinspection GoUnusedFunction
 func main() {
 	lambda.Start(handleRequest)
 }

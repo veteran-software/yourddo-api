@@ -1,4 +1,4 @@
-package server_status
+package main
 
 import (
 	"encoding/xml"
