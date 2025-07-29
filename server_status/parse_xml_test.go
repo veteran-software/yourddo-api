@@ -1,4 +1,4 @@
-package server_status
+package main
 
 import (
 	"github.com/veteran-software/yourddo-api/shared/types"
