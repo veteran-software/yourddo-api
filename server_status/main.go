@@ -17,7 +17,31 @@ import (
 	"strings"
 )
 
-func handleRequest(ctx context.Context, _ events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+var allowedMethods = []string{http.MethodGet, http.MethodOptions}
+
+// handleRequest handles incoming API Gateway requests to fetch server statuses and return responses with proper CORS headers.
+func handleRequest(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	method := strings.ToUpper(req.HTTPMethod)
+	if method == "" {
+		method = http.MethodGet
+	}
+
+	if strings.EqualFold(method, http.MethodOptions) {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusNoContent,
+			Headers: map[string]string{
+				"Access-Control-Allow-Origin":      corsOrigin(req.Path),
+				"Access-Control-Allow-Methods":     strings.Join(allowedMethods, ","),
+				"Access-Control-Allow-Headers":     "Content-Type,Authorization",
+				"Access-Control-Allow-Credentials": "true",
+			},
+		}, nil
+	}
+
+	if !strings.EqualFold(method, http.MethodGet) {
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusMethodNotAllowed}, nil
+	}
+
 	servers, errors := fetchServerStatus(ctx)
 
 	errorStrings := make([]string, 0, len(errors))
@@ -30,7 +54,6 @@ func handleRequest(ctx context.Context, _ events.APIGatewayProxyRequest) (events
 		Errors:  errorStrings,
 	}
 
-	// Convert response to JSON
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
@@ -40,15 +63,17 @@ func handleRequest(ctx context.Context, _ events.APIGatewayProxyRequest) (events
 	}
 
 	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
+		StatusCode: http.StatusOK,
 		Headers: map[string]string{
 			"Content-Type":                "application/json",
-			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Origin": corsOrigin(req.Path),
 		},
 		Body: string(jsonResponse),
 	}, nil
 }
 
+// FetchAndParseDatacenter fetches XML data from the given URL and parses it into a structured ArrayOfDatacenterStruct.
+// Returns the parsed data or an error if the request fails or the data cannot be parsed.
 func FetchAndParseDatacenter(url string) (*types.ArrayOfDatacenterStruct, error) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -68,6 +93,9 @@ func FetchAndParseDatacenter(url string) (*types.ArrayOfDatacenterStruct, error)
 	return ParseDatacenterXML(resp.Body)
 }
 
+// FetchAndParseStatus retrieves an XML status document from the given URL, parses it, and returns a Status struct.
+// Returns an error if the request fails, the response cannot be read, or parsing fails.
+// Retrieves and decodes the XML into the types.Status struct while ensuring proper charset handling.
 func FetchAndParseStatus(url string) (*types.Status, error) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -98,6 +126,7 @@ func FetchAndParseStatus(url string) (*types.Status, error) {
 	return &status, nil
 }
 
+// fetchServerStatus retrieves server information and status from a datacenter URL and returns a list of servers with errors.
 func fetchServerStatus(ctx context.Context) ([]*types.ServerInfo, []error) {
 	url := os.Getenv("DATACENTER_URL")
 	if url == "" {
@@ -157,6 +186,16 @@ func fetchServerStatus(ctx context.Context) ([]*types.ServerInfo, []error) {
 	return serverInfos, errors
 }
 
+// corsOrigin determines the CORS origin URL based on the provided path. Returns a specific URL for "/server_status".
+func corsOrigin(path string) string {
+	if path == "/server_status" {
+		return "https://ddocompendium.com"
+	}
+
+	return "https://yourddo.com"
+}
+
+// main is the entry point of the application, initializing the Lambda function and starting the request handler.
 func main() {
 	lambda.Start(handleRequest)
 }
