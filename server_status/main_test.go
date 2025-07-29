@@ -190,7 +190,38 @@ func TestFetchServerStatus(t *testing.T) {
 		})
 	}
 }
+func TestCorsOrigin(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "server status path",
+			path:     "/server_status",
+			expected: "https://ddocompendium.com",
+		},
+		{
+			name:     "other path",
+			path:     "/random_path",
+			expected: "https://yourddo.com",
+		},
+		{
+			name:     "empty path",
+			path:     "",
+			expected: "https://yourddo.com",
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := corsOrigin(tt.path)
+			if got != tt.expected {
+				t.Errorf("corsOrigin(%q) = %q, want %q", tt.path, got, tt.expected)
+			}
+		})
+	}
+}
 func runTest(t *testing.T, tt struct {
 	name        string
 	envURL      string
