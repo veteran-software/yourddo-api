@@ -1,4 +1,4 @@
-package main
+package server_status
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/veteran-software/yourddo-api/shared/types"
 	"golang.org/x/net/html/charset"
 	"io"
 	"net/http"
@@ -24,7 +25,7 @@ func handleRequest(ctx context.Context, _ events.APIGatewayProxyRequest) (events
 		errorStrings = append(errorStrings, err.Error())
 	}
 
-	response := Response{
+	response := types.Response{
 		Servers: servers,
 		Errors:  errorStrings,
 	}
@@ -48,7 +49,7 @@ func handleRequest(ctx context.Context, _ events.APIGatewayProxyRequest) (events
 	}, nil
 }
 
-func FetchAndParseDatacenter(url string) (*ArrayOfDatacenterStruct, error) {
+func FetchAndParseDatacenter(url string) (*types.ArrayOfDatacenterStruct, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching data: %w", err)
@@ -67,7 +68,7 @@ func FetchAndParseDatacenter(url string) (*ArrayOfDatacenterStruct, error) {
 	return ParseDatacenterXML(resp.Body)
 }
 
-func FetchAndParseStatus(url string) (*Status, error) {
+func FetchAndParseStatus(url string) (*types.Status, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch status: %w", err)
@@ -86,7 +87,7 @@ func FetchAndParseStatus(url string) (*Status, error) {
 
 	body = bytes.TrimSpace(body)
 
-	var status Status
+	var status types.Status
 	decoder := xml.NewDecoder(bytes.NewReader(body))
 	decoder.CharsetReader = charset.NewReaderLabel // Handle potential charset issues
 
@@ -97,7 +98,7 @@ func FetchAndParseStatus(url string) (*Status, error) {
 	return &status, nil
 }
 
-func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
+func fetchServerStatus(ctx context.Context) ([]*types.ServerInfo, []error) {
 	url := os.Getenv("DATACENTER_URL")
 	if url == "" {
 		return nil, []error{fmt.Errorf("DATACENTER_URL environment variable is not set")}
@@ -108,7 +109,7 @@ func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
 		return nil, []error{err}
 	}
 
-	worldInfo := make(map[string]*World)
+	worldInfo := make(map[string]*types.World)
 	var urls []string
 	for _, world := range result.DatacenterStructs[0].Datacenter.Datacenter.Worlds {
 		worldInfo[world.StatusServerUrl] = &world
@@ -118,7 +119,7 @@ func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
 	pool := NewWorkerPool(len(urls), 0)
 	results := pool.ProcessURLs(ctx, urls)
 
-	serverInfos := make([]*ServerInfo, 0, len(urls))
+	serverInfos := make([]*types.ServerInfo, 0, len(urls))
 	var errors []error
 
 	for result := range results {
@@ -141,7 +142,7 @@ func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
 			isActive = len(roles) >= 5
 		}
 
-		serverInfos = append(serverInfos, &ServerInfo{
+		serverInfos = append(serverInfos, &types.ServerInfo{
 			Name:       world.Name,
 			CommonName: result.Status.Name,
 			Status:     isActive,
@@ -156,6 +157,7 @@ func fetchServerStatus(ctx context.Context) ([]*ServerInfo, []error) {
 	return serverInfos, errors
 }
 
+// noinspection GoUnusedFunction
 func main() {
 	lambda.Start(handleRequest)
 }

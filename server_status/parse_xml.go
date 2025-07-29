@@ -1,14 +1,15 @@
-package main
+package server_status
 
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/veteran-software/yourddo-api/shared/types"
 	"io"
 	"regexp"
 	"strings"
 )
 
-func ParseDatacenterXML(data io.Reader) (*ArrayOfDatacenterStruct, error) {
+func ParseDatacenterXML(data io.Reader) (*types.ArrayOfDatacenterStruct, error) {
 	content, err := io.ReadAll(data)
 	if err != nil {
 		return nil, fmt.Errorf("error reading data: %w", err)
@@ -24,7 +25,7 @@ func ParseDatacenterXML(data io.Reader) (*ArrayOfDatacenterStruct, error) {
 
 	reader := strings.NewReader(xmlStr)
 
-	var result ArrayOfDatacenterStruct
+	var result types.ArrayOfDatacenterStruct
 	decoder := xml.NewDecoder(reader)
 	if err := decoder.Decode(&result); err != nil {
 		return nil, fmt.Errorf("error decoding XML: %w", err)
@@ -33,7 +34,7 @@ func ParseDatacenterXML(data io.Reader) (*ArrayOfDatacenterStruct, error) {
 	return &result, nil
 }
 
-func ParseStatusXML(data io.Reader) (*Status, error) {
+func ParseStatusXML(data io.Reader) (*types.Status, error) {
 	content, err := io.ReadAll(data)
 	if err != nil {
 		return nil, fmt.Errorf("error reading data: %w", err)
@@ -52,7 +53,7 @@ func ParseStatusXML(data io.Reader) (*Status, error) {
 
 	reader := strings.NewReader(xmlStr)
 
-	var result Status
+	var result types.Status
 	decoder := xml.NewDecoder(reader)
 	if err := decoder.Decode(&result); err != nil {
 		return nil, fmt.Errorf("error decoding XML: %w", err)

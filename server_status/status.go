@@ -1,8 +1,9 @@
-package main
+package server_status
 
 import (
 	"context"
 	"fmt"
+	"github.com/veteran-software/yourddo-api/shared/types"
 	"io"
 	"net/http"
 	"sync"
@@ -25,9 +26,9 @@ func NewWorkerPool(workers, maxRetries int) *WorkerPool {
 	}
 }
 
-func (p *WorkerPool) ProcessURLs(ctx context.Context, urls []string) chan WorkerResult {
+func (p *WorkerPool) ProcessURLs(ctx context.Context, urls []string) chan types.WorkerResult {
 	jobs := make(chan string, len(urls))
-	results := make(chan WorkerResult, len(urls))
+	results := make(chan types.WorkerResult, len(urls))
 	var wg sync.WaitGroup
 
 	// Start workers
@@ -38,7 +39,7 @@ func (p *WorkerPool) ProcessURLs(ctx context.Context, urls []string) chan Worker
 			for url := range jobs {
 				status, err := FetchAndParseStatus(url)
 				select {
-				case results <- WorkerResult{
+				case results <- types.WorkerResult{
 					URL:    url,
 					Status: status,
 					Error:  err,
@@ -70,7 +71,7 @@ func (p *WorkerPool) ProcessURLs(ctx context.Context, urls []string) chan Worker
 	return results
 }
 
-func (p *WorkerPool) fetchStatus(ctx context.Context, url string) (*Status, error) {
+func (p *WorkerPool) fetchStatus(ctx context.Context, url string) (*types.Status, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
