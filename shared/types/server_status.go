@@ -1,4 +1,4 @@
-package main
+package types
 
 import (
 	"encoding/xml"
@@ -45,6 +45,7 @@ type Status struct {
 	WorldPVPPermission      string   `xml:"world_pvppermission"`
 }
 
+// ArrayOfDatacenterStruct the initial data received from the GLS servers
 type ArrayOfDatacenterStruct struct {
 	XMLName           xml.Name           `xml:"ArrayOfDatacenterStruct"`
 	DatacenterStructs []DatacenterStruct `xml:"DatacenterStruct"`

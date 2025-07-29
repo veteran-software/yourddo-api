@@ -1,6 +1,7 @@
-package main
+package server_status
 
 import (
+	"github.com/veteran-software/yourddo-api/shared/types"
 	"strings"
 	"testing"
 )
@@ -9,7 +10,7 @@ func TestParseDatacenterXML(t *testing.T) {
 	tests := []struct {
 		name    string
 		xml     string
-		want    *ArrayOfDatacenterStruct
+		want    *types.ArrayOfDatacenterStruct
 		wantErr bool
 	}{
 		{
@@ -74,7 +75,7 @@ func TestParseStatusXML(t *testing.T) {
 	tests := []struct {
 		name    string
 		xml     string
-		want    *Status
+		want    *types.Status
 		wantErr bool
 	}{
 		{

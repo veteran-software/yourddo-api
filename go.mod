@@ -1,6 +1,6 @@
-module yourddo-api
+module github.com/veteran-software/yourddo-api
 
-go 1.24
+go 1.24.1
 
 require (
 	github.com/aws/aws-lambda-go v1.49.0

@@ -1,10 +1,11 @@
-package main
+package server_status
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/veteran-software/yourddo-api/shared/types"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -129,7 +130,7 @@ func TestHandleRequest(t *testing.T) {
 				t.Errorf("status = %v, want %v", got.StatusCode, tt.wantStatus)
 			}
 
-			var response Response
+			var response types.Response
 			if err := json.Unmarshal([]byte(got.Body), &response); err != nil {
 				t.Errorf("Failed to unmarshal response: %v", err)
 				return
@@ -232,7 +233,7 @@ func checkErrors(t *testing.T, errors []error, tt struct {
 	}
 }
 
-func checkServers(t *testing.T, servers []*ServerInfo, tt struct {
+func checkServers(t *testing.T, servers []*types.ServerInfo, tt struct {
 	name        string
 	envURL      string
 	wantServers int
@@ -312,13 +313,13 @@ func TestFetchAndParseStatus(t *testing.T) {
 	tests := []struct {
 		name    string
 		url     string
-		want    *Status
+		want    *types.Status
 		wantErr bool
 	}{
 		{
 			name:    "valid URL",
 			url:     server.URL,
-			want:    &Status{Name: "TestServer", AllowBillingRole: "role1,role2,role3,role4,role5"},
+			want:    &types.Status{Name: "TestServer", AllowBillingRole: "role1,role2,role3,role4,role5"},
 			wantErr: false,
 		},
 		{

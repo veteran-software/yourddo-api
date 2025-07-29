@@ -1,0 +1,47 @@
+name: Build & Deploy Lambdas
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  GOOS: linux
+  GOARCH: amd64
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Lambdas
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        lambda:
+          - server_status
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build Lambda ${{ matrix.lambda }}
+        run: make ${{ matrix.lambda }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Lambda ${{ matrix.lambda }}
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ matrix.lambda }} \
+            --zip-file fileb://dist/${{ matrix.lambda }}/${{ matrix.lambda }}.zip
