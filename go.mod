@@ -3,7 +3,7 @@ module github.com/veteran-software/yourddo-api
 go 1.24.1
 
 require (
-	github.com/aws/aws-lambda-go v1.49.0
+	github.com/aws/aws-lambda-go v1.51.0
 	golang.org/x/net v0.42.0
 )
 
